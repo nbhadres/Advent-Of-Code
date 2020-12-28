@@ -55,12 +55,12 @@ void Solver::ResetInput()
 }
 
 bool Solver::DoesLineMatch(const std::string& line, const MatchingCriteria& match)
-{
-    const auto pos = match.right * linesRead_;
+{    
     if (linesRead_++ % match.down > 0)
     {
         return false;
     }
+    const auto pos = match.right * (linesRead_ - 1) / match.down;
     if (line[pos % line.length()] == match.symbol)
     {
         return true;
@@ -88,7 +88,7 @@ int Solver::Solve(const MatchingCriteria& match)
 
 int main()
 {
-    logger.SetDebugLevel(1);
+    logger.SetDebugLevel(0);
     MatchingCriteria match();
     Solver solver("input.txt");
     std::cout << "Mulitplication of all conditions is: " << log::endl <<
