@@ -16,7 +16,7 @@ public:
     Logger& operator<<(const T& t);
     template<class T>
     Logger& operator<<(T* t);
-    Logger(std::ostream* str_v) : s_(str_v) {}
+    Logger(std::ostream* str_v) : debugLevel_(0), s_(str_v) {}
     void SetDebugLevel(const int i) {debugLevel_ = i;};
 };
 
