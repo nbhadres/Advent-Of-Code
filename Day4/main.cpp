@@ -2,9 +2,9 @@
 #include <fstream>
 #include <vector>
 #include <string>
-#include <optional>
 #include <map>
 #include <algorithm>
+#include <functional>
 
 #include "logger.h"
 
@@ -28,14 +28,103 @@ namespace
         "cid"
     };
 
-    const std::vector<std::string> requiredFields = {
-        "byr",
-        "iyr",
-        "eyr",
-        "hgt",
-        "hcl",
-        "ecl",
-        "pid"
+    bool StringBoundsCheck(const std::string& value, const int lowerBound, const int upperBound)
+    {
+        const int val = std::stoi(value);
+        if (val >= lowerBound && val <= upperBound)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    bool byrValidation(const std::string& value)
+    {
+        return StringBoundsCheck(value, 1920, 2002);
+    }
+
+    bool iyrValidation(const std::string& value)
+    {
+        return StringBoundsCheck(value, 2010, 2020);
+    }
+
+    bool eyrValidation(const std::string& value)
+    {
+        return StringBoundsCheck(value, 2020, 2030);
+    }
+
+    bool hgtValidation(const std::string& value)
+    {
+        if (value.length() < 3)
+        {
+            return false;
+        }
+        const std::string unit = value.substr(value.length() - 2);
+        if (unit == "cm")
+        {
+            return StringBoundsCheck(value.substr(0, value.length() - 2), 150, 193);
+        }
+        if (unit == "in")
+        {
+            return StringBoundsCheck(value.substr(0, value.length() - 2), 59, 76);
+        }
+        return false;
+    }
+
+    bool hclValidation(const std::string& value)
+    {
+        if (value.size() != 7)
+        {
+            return false;
+        }
+        if (value[0] != '#')
+        {
+            return false;
+        }
+        for (int i = 1; i < value.size(); ++i)
+        {
+            if (!(::isdigit(value[i])) && (value[i] < 'a' && value[i] > 'f'))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool eclValidation(const std::string& value)
+    {
+        static const std::vector<std::string> eyeColours = {"amb", "blu", "brn", "gry", "grn", "hzl", "oth"};
+        if (std::find(eyeColours.begin(), eyeColours.end(), value) != eyeColours.end())
+        {
+            return true;
+        }
+        return false;
+    }
+
+    bool pidValidation(const std::string& value)
+    {
+        if (value.size() != 9)
+        {
+            return false;
+        }
+        for (int i = 0; i < value.size(); ++i)
+        {
+            if (!::isdigit(value[i]))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    const std::map<std::string, std::function<bool(const std::string&)>> requiredFields = {
+        {"byr", byrValidation},
+        {"iyr", iyrValidation},
+        {"eyr", eyrValidation},
+        {"hgt", hgtValidation},
+        {"hcl", hclValidation},
+        {"ecl", eclValidation},
+        {"pid", pidValidation}
     };
 }
 
@@ -58,9 +147,9 @@ bool Passport::Validate()
     }
     for (auto iter = requiredFields.begin(); iter != requiredFields.end(); ++iter)
     {
-        if (std::find_if(m_fields.begin(), m_fields.end(), [iter](auto& p) {return *iter == p.first;}) == m_fields.end())
+        if (std::find_if(m_fields.begin(), m_fields.end(), [iter](auto& p) {return (iter->first == p.first && iter->second(p.second));}) == m_fields.end())
         {
-            logger << "Returning false because of missing field: " << *iter << log::endl;
+            logger << "Returning false because of missing or invalid field: " << iter->first << log::endl;
             return false;
         }
     }
@@ -124,18 +213,17 @@ int Solver::Solve()
         if (line.empty())
         {
             logger << "Moving to next passport, this passport was: " << m_passports.back().Validate()  << log::endl;
-
             m_passports.emplace_back();
             continue;
         }
         m_passports.back().AddFieldsFromLine(line);
     }
-    unsigned int i = 0;
+    unsigned int solution = 0;
     for (auto iter = m_passports.begin(); iter != m_passports.end(); ++iter)
     {
-        i += iter->Validate() ? 1 : 0;
+        solution += iter->Validate() ? 1 : 0;
     }
-    return i;
+    return solution;
 }
 
 void ReadLine(std::string& line)
